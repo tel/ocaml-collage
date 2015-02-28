@@ -1,4 +1,6 @@
 S src
-B _build
+S src/vdom
+B _build/src
+B _build/src/vdom
 PKG js_of_ocaml, js_of_ocaml.syntax
 EXT js
