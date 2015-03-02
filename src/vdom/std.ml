@@ -1,10 +1,10 @@
 
 module rec Tree : sig
   type t =
-    [ `Node of Node.t
-    | `Text of Text.t
+    [ `Node   of Node.t
+    | `Text   of Text.t
     | `Widget of Widget.t
-    | `Thunk of Thunk.t
+    | `Thunk  of Thunk.t
     ]
   include Summary.Here with type t := t
 end =
@@ -26,7 +26,7 @@ end
 and Node : sig
   type t
   val make :
-    ?tag_name  : string ->
+    ?tag       : string ->
     ?attrs     : Attr.map ->
     ?key       : Key.t ->
     ?namespace : string ->
@@ -40,27 +40,33 @@ struct
     ; attrs     : Attr.map
     ; children  : Tree.t array
     ; key       : Key.t option
-    ; namespace : string option
+    ; namespace : Namespace.t option
     ; hooks     : Hook.map
     ; summary   : Summary.t
     }
 
   let summarize x = x.summary
 
+  let omap f = function
+    | Some x -> Some (f x)
+    | None   -> None
+
+
   let make
-      ?tag_name:(tag_name = "div")
+      ?tag:(tag = "div")
       ?attrs:(attrs = Attr.Map.empty)
       ?key:(key = Key.fresh ())
       ?namespace
       children
     =
-    let
-      get_hooks key attr map = match attr with
-      | Attr.Hook h -> Hook.Map.add key h map
-      | _           -> map
-    in
-    let hooks = Attr.Map.fold get_hooks attrs Hook.Map.empty in
-    failwith "no"
+    let tag       = Tag.of_string tag in
+    let attrs     = attrs in
+    let key       = Some key in
+    let namespace = omap Namespace.of_string namespace in
+    let hooks     = Attr.hooks attrs in
+    let summary   = failwith "noo" in
+    let children  = failwith "noo" in
+    { tag; attrs; key; namespace; hooks; summary; children }
 end
 
 and Text : sig

@@ -4,18 +4,19 @@ maintainer: "Joseph Abrahamson <me@jspha.com>"
 authors: [ "Joseph Abrahamson <me@jspha.com>" ]
 
 license: "BSD3"
-homepage: "https://github.com/tel/ocaml-cats"
-bug-reports: "https://github.com/tel/ocaml-cats/issues"
-dev-repo: "https://github.com/tel/ocaml-cats.git"
+homepage: "https://github.com/tel/ocaml-collage"
+bug-reports: "https://github.com/tel/ocaml-collage/issues"
+dev-repo: "https://github.com/tel/ocaml-collage.git"
 
 tags: [
-  "category theory"
-  "signatures"
+  "frontend"
+  "js_of_ocaml"
+  "dom"
 ]
 
 build: [
   ["ocamlbuild" "cats.cma"]
   ["ocamlbuild" "cats.cmxa"]
 ]
-remove: ["ocamlfind" "remove" "fstreams"]
-depends: "ocamlfind" {build}
+remove: ["ocamlfind" "remove" "collage"]
+depends: "ocamlfind" {build} & "uri"

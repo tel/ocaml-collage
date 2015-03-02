@@ -1,3 +1,8 @@
 true: safe_string
-true: package(js_of_ocaml), package(js_of_ocaml.syntax), syntax(camlp4o)
+
+true: package(js_of_ocaml)
+true: package(js_of_ocaml.syntax)
+true: package(uri)
+true: syntax(camlp4o)
+
 <src>: include
