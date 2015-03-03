@@ -9,5 +9,5 @@ type 's spec =
   }
 
 val make : 's spec -> t
-
-include Summary.Here with type t := t
+val live : t -> bool
+val destroy : t -> Dom.element Js.t -> unit
