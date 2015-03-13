@@ -1,10 +1,9 @@
 
 type el =
-  { tag       : Tag.t
-  ; attrs     : Attr.map
-  ; key       : Key.t option
-  ; namespace : Namespace.t option
-  ; hooks     : Hook.map
+  { tag   : Tag.t
+  ; attrs : Attr.map
+  ; key   : Key.t option
+  ; ns    : Ns.t option
   }
 
 type t = el

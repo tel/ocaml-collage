@@ -1,6 +1,10 @@
 type t =
-  | Elem  of El.t * t array
+  | Node  of node
   | Text  of Text.t
+and node =
+  { el       : El.t
+  ; children : t array
+  }
 
 val text : string -> t
 

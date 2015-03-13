@@ -9,4 +9,4 @@ and node =
 
 let text s = Text (Text.of_string s)
 
-let node = Node ()
+let node = failwith "noo"

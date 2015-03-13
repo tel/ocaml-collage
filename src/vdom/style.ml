@@ -1,4 +1,4 @@
 
 module Map = Map.Make (String)
 
-type t = Attr.value Map.t
+type t = Attr.v Map.t
