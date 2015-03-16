@@ -102,32 +102,82 @@ module Dom = struct
   let node tag attrs styles children =
     El { tag; attrs; styles; children = Array.of_list children }
 
-  let rec to_string : t -> string = function
-    | Text s -> s
-    | El { tag; attrs; styles; children } ->
-      let tg = Tag.to_string tag in
-      let cs = Array.map to_string children in
-      let ss = Styles.fold begin fun prop (value, dim) str ->
-          str ^
-          Style.to_string prop
-          ^ ":" ^
-          string_of_value value
-          ^ ";" ^
-          string_of_dim dim
-        end styles "" in
-      let attrs = Attrs.fold begin fun at value str ->
-          str ^
-          Attr.to_string at
-          ^ "=\"" ^
-          string_of_value value
-          ^ "\" "
-        end (Attrs.add (Attr.of_string "style") (String ss) attrs) "" in
-      "<" ^ tg ^ " " ^ attrs ^ begin
-        if Array.length cs = 0 then "/>"
-        else
-          let inner = Array.fold_left (fun str c -> str ^ c) "" cs in
-          ">" ^ inner ^ "<" ^ tg ^ ">"
-      end
+  let styles_buf : (value * dim) Styles.t -> Buffer.t =
+    fun s ->
+      let buf = Buffer.create 16 in
+      let ( -- ) = Buffer.add_string in
+      Styles.iter begin fun prop (value, dim) ->
+        buf -- Style.to_string prop;
+        buf -- ":";
+        buf -- string_of_value value;
+        buf -- string_of_dim   dim;
+        buf -- ";"
+      end s;
+      buf
+
+  let attrs_buf : value Attrs.t -> Buffer.t =
+    fun ats ->
+      let buf = Buffer.create 16 in
+      let ( -- ) = Buffer.add_string in
+      Attrs.iter begin fun key value ->
+        buf -- Attr.to_string key;
+        buf -- "=\"";
+        buf -- string_of_value value;
+        buf -- "\" ";
+      end ats;
+      buf
+
+  let rec to_string (x : t) : string =
+    let buf = Buffer.create 16 in
+    let ( -- ) buf s = Buffer.add_string buf s in
+    let ( -* ) buf s = Buffer.add_buffer buf s in
+    let rec aux : t -> unit =
+      function
+      | Text s -> buf -- s
+      | El { tag; attrs; styles; children } ->
+        let stylesb = styles_buf styles in
+        let attrs =
+          if Styles.is_empty styles then attrs
+          else Attrs.add (Attr.of_string "style")
+              (String (Buffer.contents stylesb)) attrs in
+        buf -- "<";
+        buf -- Tag.to_string tag;
+        buf -- " ";
+        buf -* attrs_buf attrs;
+        buf -- ">";
+        Array.iter aux children;
+        buf -- "</";
+        buf -- Tag.to_string tag;
+        buf -- ">";
+    in
+    aux x; Buffer.contents buf
+
+    (*   function *)
+    (* | Text s -> s *)
+    (* | El { tag; attrs; styles; children } -> *)
+    (*   let tg = Tag.to_string tag in *)
+    (*   let cs = Array.map to_string children in *)
+    (*   let ss = Styles.fold begin fun prop (value, dim) str -> *)
+    (*       str ^ *)
+    (*       Style.to_string prop *)
+    (*       ^ ":" ^ *)
+    (*       string_of_value value *)
+    (*       ^ ";" ^ *)
+    (*       string_of_dim dim *)
+    (*     end styles "" in *)
+    (*   let attrs = Attrs.fold begin fun at value str -> *)
+    (*       str ^ *)
+    (*       Attr.to_string at *)
+    (*       ^ "=\"" ^ *)
+    (*       string_of_value value *)
+    (*       ^ "\" " *)
+    (*     end (Attrs.add (Attr.of_string "style") (String ss) attrs) "" in *)
+    (*   "<" ^ tg ^ " " ^ attrs ^ begin *)
+    (*     if Array.length cs = 0 then "/>" *)
+    (*     else *)
+    (*       let inner = Array.fold_left (fun str c -> str ^ c) "" cs in *)
+    (*       ">" ^ inner ^ "<" ^ tg ^ ">" *)
+    (*   end *)
 
 end
 
