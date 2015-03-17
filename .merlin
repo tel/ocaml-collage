@@ -1,8 +1,4 @@
 S src
-S src/vdom
 B _build/src
-B _build/src/vdom
-PKG js_of_ocaml
-PKG js_of_ocaml.syntax
-PKG uri
+PKG js_of_ocaml js_of_ocaml.syntax uri
 EXT js

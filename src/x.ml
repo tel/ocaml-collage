@@ -1,89 +1,40 @@
 
-type value =
-  | String of string
-  | Int    of int
-  | Float  of float
-  | Bool   of bool
-
-let string_of_value = function
-  | String s -> s
-  | Int i    -> string_of_int i
-  | Float f  -> string_of_float f
-  | Bool b   -> string_of_bool b
-
-type dim =
-  [ `em
-  | `ex
-  | `pct
-  | `px
-  | `cm
-  | `mm
-  | `inch
-  | `pt
-  | `pc
-  | `none
-  ]
-
-let string_of_dim = function
-  | `em -> "em"
-  | `ex -> "ex"
-  | `pct -> "pct"
-  | `px -> "px"
-  | `cm -> "cm"
-  | `mm -> "mm"
-  | `inch -> "in"
-  | `pt -> "pt"
-  | `pc -> "pc"
-  | `none -> ""
-
-module StringLike = struct
-  module type S = sig
-    type t
-    val compare : t -> t -> int
-    val of_string : string -> t
-    val to_string : t -> string
-  end
-
-  module Simple : S = struct
-    include String
-    let of_string s = s
-    let to_string s = s
-  end
-end
-
 module type Dom = sig
 
-  module Attr : StringLike.S
-  module Attrs : Map.S with type key = Attr.t
+  module Attr : Stringlike.S
+  module Attrs : sig
+    include Map.S with type key = Attr.t
+  end
+  type attrs = Value.t Attrs.t
 
-  module Style : StringLike.S
-  module Styles : Map.S with type key = Style.t
+  module Style : Stringlike.S
+  module Styles : sig
+    include Map.S with type key = Style.t
+  end
+  type styles = string Styles.t
 
-  module Tag : StringLike.S
+  module Tag : Stringlike.S
 
   type t
 
   val text : string -> t
-  val node
-    :  Tag.t
-    -> value Attrs.t
-    -> (value * dim) Styles.t
-    -> t list
-    -> t
+  val node : Tag.t -> attrs -> styles -> t list -> t
 
 end
 
 module Dom = struct
 
-  module Attr = StringLike.Simple
+  module Attr = Stringlike.Simple
   module Attrs = Map.Make (Attr)
+  type attrs = Value.t Attrs.t
 
-  module Style = StringLike.Simple
+  module Style = Stringlike.Simple
   module Styles = Map.Make (Style)
+  type styles = string Styles.t
 
   module Tag = struct
     type t = string
-    let of_string s = String.uppercase s
+    let of_string s = String.lowercase s
     let to_string s = s
     let compare = String.compare
   end
@@ -92,92 +43,15 @@ module Dom = struct
     | El   of el
     | Text of string
   and el =
-    { tag : Tag.t
-    ; attrs : value Attrs.t
-    ; styles : (value * dim) Styles.t
+    { tag      : Tag.t
+    ; attrs    : attrs
+    ; styles   : styles
     ; children : t array
     }
 
   let text s = Text s
   let node tag attrs styles children =
     El { tag; attrs; styles; children = Array.of_list children }
-
-  let styles_buf : (value * dim) Styles.t -> Buffer.t =
-    fun s ->
-      let buf = Buffer.create 16 in
-      let ( -- ) = Buffer.add_string in
-      Styles.iter begin fun prop (value, dim) ->
-        buf -- Style.to_string prop;
-        buf -- ":";
-        buf -- string_of_value value;
-        buf -- string_of_dim   dim;
-        buf -- ";"
-      end s;
-      buf
-
-  let attrs_buf : value Attrs.t -> Buffer.t =
-    fun ats ->
-      let buf = Buffer.create 16 in
-      let ( -- ) = Buffer.add_string in
-      Attrs.iter begin fun key value ->
-        buf -- Attr.to_string key;
-        buf -- "=\"";
-        buf -- string_of_value value;
-        buf -- "\" ";
-      end ats;
-      buf
-
-  let rec to_string (x : t) : string =
-    let buf = Buffer.create 16 in
-    let ( -- ) buf s = Buffer.add_string buf s in
-    let ( -* ) buf s = Buffer.add_buffer buf s in
-    let rec aux : t -> unit =
-      function
-      | Text s -> buf -- s
-      | El { tag; attrs; styles; children } ->
-        let stylesb = styles_buf styles in
-        let attrs =
-          if Styles.is_empty styles then attrs
-          else Attrs.add (Attr.of_string "style")
-              (String (Buffer.contents stylesb)) attrs in
-        buf -- "<";
-        buf -- Tag.to_string tag;
-        buf -- " ";
-        buf -* attrs_buf attrs;
-        buf -- ">";
-        Array.iter aux children;
-        buf -- "</";
-        buf -- Tag.to_string tag;
-        buf -- ">";
-    in
-    aux x; Buffer.contents buf
-
-    (*   function *)
-    (* | Text s -> s *)
-    (* | El { tag; attrs; styles; children } -> *)
-    (*   let tg = Tag.to_string tag in *)
-    (*   let cs = Array.map to_string children in *)
-    (*   let ss = Styles.fold begin fun prop (value, dim) str -> *)
-    (*       str ^ *)
-    (*       Style.to_string prop *)
-    (*       ^ ":" ^ *)
-    (*       string_of_value value *)
-    (*       ^ ";" ^ *)
-    (*       string_of_dim dim *)
-    (*     end styles "" in *)
-    (*   let attrs = Attrs.fold begin fun at value str -> *)
-    (*       str ^ *)
-    (*       Attr.to_string at *)
-    (*       ^ "=\"" ^ *)
-    (*       string_of_value value *)
-    (*       ^ "\" " *)
-    (*     end (Attrs.add (Attr.of_string "style") (String ss) attrs) "" in *)
-    (*   "<" ^ tg ^ " " ^ attrs ^ begin *)
-    (*     if Array.length cs = 0 then "/>" *)
-    (*     else *)
-    (*       let inner = Array.fold_left (fun str c -> str ^ c) "" cs in *)
-    (*       ">" ^ inner ^ "<" ^ tg ^ ">" *)
-    (*   end *)
 
 end
 
@@ -187,14 +61,14 @@ module type DSL = sig
   module C : sig
 
     type node_c =
-         ?attrs  : (Attr.t  * value)       list
-      -> ?styles : (Style.t * value * dim) list
+         ?attrs  : (Attr.t  * Value.t) list
+      -> ?styles : (Style.t * string)  list
       -> t list
       -> t
 
     type leaf_c =
-         ?attrs  : (Attr.t  * value)       list
-      -> ?styles : (Style.t * value * dim) list
+         ?attrs  : (Attr.t  * Value.t) list
+      -> ?styles : (Style.t * string)  list
       -> unit
       -> t
 
@@ -601,25 +475,25 @@ module DSL_Of (Dom : Dom) : DSL
   module C = struct
 
     type node_c =
-         ?attrs  : (Attr.t  * value)       list
-      -> ?styles : (Style.t * value * dim) list
+         ?attrs  : (Attr.t  * Value.t) list
+      -> ?styles : (Style.t * string)  list
       -> t list
       -> t
 
     type leaf_c =
-         ?attrs  : (Attr.t  * value)       list
-      -> ?styles : (Style.t * value * dim) list
+         ?attrs  : (Attr.t  * Value.t) list
+      -> ?styles : (Style.t * string)  list
       -> unit
       -> t
 
-    let mk_attrs : (Attr.t * value) list -> value Attrs.t =
+    let mk_attrs : (Attr.t * Value.t) list -> attrs =
       List.fold_left
         (fun atts (prop, value) -> Attrs.add prop value atts)
         Attrs.empty
 
-    let mk_styles : (Style.t * value * dim) list -> (value * dim) Styles.t =
+    let mk_styles : (Style.t * string) list -> styles =
       List.fold_left
-        (fun atts (prop, value, dim) -> Styles.add prop (value, dim) atts)
+        (fun atts (prop, value) -> Styles.add prop value atts)
         Styles.empty
 
     let mk_node : string -> node_c =
@@ -1045,7 +919,7 @@ let q =
   let open DSL.C.At in
   let open DSL.C.El in
   let open DSL in
-  let ( % ) p v = (DSL.Attr.of_string p, String v) in
+  let ( % ) p v = (DSL.Attr.of_string p, `String v) in
   html_ [
     head_ [
       meta_ ~attrs:[

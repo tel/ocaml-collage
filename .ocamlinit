@@ -1,0 +1,4 @@
+(* -*- mode: tuareg; -*- *)
+#use "topfind" ;;
+#directory "_build" ;;
+#load "collage.cma" ;;

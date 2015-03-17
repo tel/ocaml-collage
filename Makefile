@@ -1,4 +1,4 @@
-OB = ocamlbuild -use-ocamlfind -plugin-tag "package(js_of_ocaml.ocamlbuild)"
+OB = ocamlbuild -classic-display -use-ocamlfind -plugin-tag "package(js_of_ocaml.ocamlbuild)"
 
 all:
 	$(OB) collage.cma
