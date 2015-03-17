@@ -192,12 +192,11 @@ module Cap = struct
   let compare x y = Prop.compare x.prop y.prop
 end
 
-module Cs = Types.CapSet.Make (struct
-    type prop = Prop.t
-    type value = Value.t
+module Cs = Types.FixedMap.Make (struct
+    type k = Prop.t
+    type v = Value.t
 
     let compare = Prop.compare
-    let value0 = `Empty
   end)
 
 include Cs

@@ -120,7 +120,7 @@ module Prop : sig
   val unicode_bidi_          : t
 end
 
-include Types.CapSet.S
-  with type prop := Prop.t
-   and type value := Value.t
+include Types.FixedMap.S
+  with type k := Prop.t
+   and type v := Value.t
    and type t := t

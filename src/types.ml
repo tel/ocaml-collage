@@ -5,102 +5,100 @@ module type Monoid = sig
   val mult : t -> t -> t
 end
 
-module CapSet = struct
+module FixedMap = struct
 
   module type S = sig
-    type prop
-    type value
-
     type t
-
-    (** One style is a substyle of the other if it defines a subset of the properties *)
-    val sub : t -> t -> bool
+    type k
+    type v
 
     val empty     : t
+
+    val merge     : (k -> v option -> v option -> v option) -> t -> t -> t
     val union     : t -> t -> t
     val intersect : t -> t -> t
+    val diff : t -> t -> t
+    val sub       : t -> t -> bool
 
     include Monoid with type t := t
 
     val cardinal : t -> int
     val is_empty : t -> bool
-    val mem : t -> prop -> bool
-    val lookup : t -> prop -> value option
+    val mem : k -> t -> bool
+    val lookup : t -> k -> v option
 
-    val singleton : prop -> value -> t
-    val of_list : (prop * value) list -> t
+    val map  : (v -> v) -> (t -> t)
+    val mapi : (k -> v -> v) -> (t -> t)
 
-    val add    : prop -> value -> (t -> t)
-    val remove : prop -> (t -> t)
-    val filter : (prop -> value -> bool) -> (t -> t)
+    val singleton : k -> v -> t
+    val of_list : (k * v) list -> t
 
-    val diff : t -> t -> t
+    val add    : k -> v -> (t -> t)
+    val remove : k -> (t -> t)
+    val filter : (k -> v -> bool) -> (t -> t)
 
-    val iter : (prop -> value -> unit) -> (t -> unit)
-    val fold : ('a -> prop -> value -> 'a) -> 'a -> (t -> 'a)
+    val partition : (k -> v -> bool) -> (t -> t * t)
+
+    val iter : (k -> v -> unit) -> (t -> unit)
+    val fold : ('r -> k -> v -> 'r) -> 'r -> (t -> 'r)
 
     module FoldMap (M : Monoid) : sig
-      val fold_map : (prop -> value -> M.t) -> (t -> M.t)
+      val fold_map : (k -> v -> M.t) -> (t -> M.t)
     end
   end
 
   module type Basis = sig
-    type prop
-    type value
+    type k
+    type v
 
-    val compare : prop -> prop -> int
-    val value0 : value
+    val compare : k -> k -> int
   end
 
-  module Make ( Cb : Basis ) : S
-    with type prop := Cb.prop
-     and type value := Cb.value
+  module Make ( Fb : Basis ) : S
+    with type k := Fb.k
+     and type v := Fb.v
   = struct
 
-    module Cap = struct
-      type t =
-        { prop  : Cb.prop
-        ; value : Cb.value
-        }
-      let mk prop value = {prop; value}
-      let mk_bare prop = {prop; value = Cb.value0}
-      let fold f {prop; value} = f prop value
-      let prop {prop} = prop
-      let value {value} = value
-      let compare x y = Cb.compare x.prop y.prop
-    end
+    module M = Map.Make (struct
+        type t = Fb.k
+        let compare = Fb.compare
+      end)
 
-    module S = Set.Make (Cap)
+    type t = Fb.v M.t
+    open M
 
-    type t = S.t
+    let sub = failwith "noo"
 
-    let sub = S.subset
+    let merge = failwith "noo"
+    let map = M.map
+    let mapi = M.mapi
+    let partition = failwith "noo"
 
-    let empty = S.empty
-    let union = S.union
+    let empty = M.empty
+    let union = failwith "noo"
     let unit = empty
     let mult = union
 
-    let lookup s p = try Some (Cap.value @@ S.find (Cap.mk_bare p) s) with | Not_found -> None;;
-    let intersect = S.inter
-    let cardinal = S.cardinal
-    let is_empty = S.is_empty
-    let mem s prop = S.mem (Cap.mk_bare prop) s
-    let singleton p v = S.singleton (Cap.mk p v)
-    let of_list ls = S.of_list (List.map (fun (p, v) -> Cap.mk p v) ls)
-    let add p v = S.add (Cap.mk p v)
-    let remove p = S.remove (Cap.mk_bare p)
-    let filter pred = S.filter (Cap.fold pred)
-    let diff = S.diff
-    let iter f = S.iter (Cap.fold f)
-    let fold f s a0 = S.fold (fun cap a -> Cap.fold (f a) cap) a0 s
+    let lookup s p = try Some (M.find p s) with Not_found -> None
+    let intersect = failwith "noo"
+    let cardinal = M.cardinal
+    let is_empty = M.is_empty
+    let mem = M.mem
+    let singleton = M.singleton
+    let of_list = List.fold_left (fun s (k, v) -> M.add k v s) M.empty
+    let add = M.add
+    let remove = M.remove
+    let filter = M.filter
+    let diff = failwith "noo"
+    let iter = M.iter
+    let fold f r s = M.fold (fun k v a -> f a k v) s r
 
-    module FoldMap (M : Monoid) = struct
+    module FoldMap (Mon : Monoid) = struct
       let fold_map f s =
         List.fold_left
-          (fun m cap -> M.mult m (Cap.fold f cap))
-          M.unit
-          (S.elements s)
+          (fun m (k, v) -> Mon.mult m (f k v))
+          Mon.unit
+          (M.bindings s)
     end
   end
 
